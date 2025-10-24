@@ -1,14 +1,6 @@
-#include <stdio.h>
-
+#include<stdio.h>
 int main(void)
 {
-    int a;
-    printf("This program checks if a number is even or odd.\n");
-
-    printf("Enter a number: ");
-    scanf("%d", &a);
-
-    (a % 2 == 0) ? printf("Even\n") : printf("Odd\n");
-
-    return 0;
+	printf("*\n**\n***\n****\n*****");
+	return 0;
 }
