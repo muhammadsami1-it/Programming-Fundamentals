@@ -1,17 +1,13 @@
-#include <stdio.h>
-
-int main(void)
+#include<stdio.h>
+int main (void)
 {
-    int a, b;
-    printf("This program checks the maximum number between two input numbers.\n");
-
-    printf("Enter 1st number: ");
-    scanf("%d", &a);
-
-    printf("Enter 2nd number: ");
-    scanf("%d", &b);
-
-    (a > b)?printf("Maximum number is: %d\n", a):printf("Maximum number is: %d\n", b);
-    
-    return 0;
+	int a,b;
+	printf("enter num 1:");
+	scanf("%d",&a);
+	printf("enter num 2:");
+	scanf("%d",&b);
+	a=a+b;
+	b=a-b;
+	a=a-b;
+	printf("number 1 is %d number 2 is %d",a,b);
 }
