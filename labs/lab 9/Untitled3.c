@@ -1,29 +1,24 @@
 #include<stdio.h>
-int main (void)
+int main()
 {
-	int arr[3];
-	// declare pointer variable
-	int *ptr;
-	// declare loop iterative variable
-	int i;
-	// ptr= &arr[0}
-	ptr=arr;
-	
-	//use for loop to put values in all aray elements using pointer notation
-	for(i=0;i<3;++i){
-		*(ptr+i)=i+1;
+	int arr[4]={2,3,4,1};
+	for(int i=0;i<4;i++)
+	{
+		for(int j=0;j<3-i;j++)
+		{
+			if(arr[j]>arr[j+1]){
+				int temp=arr[j];
+				arr[j]=arr[j+1];
+				arr[j+1]=temp;
+				
+			}else
+			{
+				arr[j]=arr[j];
+			}
+		}
 	}
-	
-	// use for loop to print values of all array elements using pointer notation
-	printf("\n Display value using pointers: \n");
-	
-	for(i=0;i<3;i++){
-		printf("%d\n",*(ptr+i));
+	//print array
+	for(int i=0;i<4;i++){
+		printf("%d",arr[i]);
 	}
-	// use for loop to print addresses of all array elements using pointer notation
-	printf("\n Displaying Address using pointers: \n");
-	for(i=0;i<3;i++){
-		printf("%p\n",ptr+i);
-	}
-	return 0;
 }
