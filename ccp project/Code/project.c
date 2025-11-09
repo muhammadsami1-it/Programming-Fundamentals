@@ -7,6 +7,7 @@
 #define MAX_PHONE 25
 #define MAX_PASS 32
 #define MAX_USERS 100
+#define XOR_KEY 0x5A     
 
 struct User {
     char name[MAX_NAME];
@@ -22,6 +23,7 @@ int noOfUsers = 0;
 
 // Function prototypes
 void stripNewline(char *str);
+void xorCipher(char *str);
 int createYourAccount();
 int loginYourAccount(struct User *u);
 char *reversePassword(char password[MAX_PASS]);
@@ -30,21 +32,24 @@ void balanceInquiry(struct User *u);
 int fastCash(struct User *u);
 int loadUsers(struct User users[]);
 void saveUsers(struct User users[], int count);
+int cashWithdrawal(struct User *u);
+void deposit(struct User *u);
 
 int main() {
-	  // Enable ANSI escape sequences in Windows console
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD dwMode = 0;
-    GetConsoleMode(hOut, &dwMode);
-    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    SetConsoleMode(hOut, dwMode);
+    //  Enable ANSI escape sequences in Windows console
+    // HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    // DWORD dwMode = 0;
+    // GetConsoleMode(hOut, &dwMode);
+    // dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    // SetConsoleMode(hOut, dwMode);
+
     int option;
     struct User found;
     noOfUsers = loadUsers(users);   
-    
-    printf("\n\t\t\t\033[34m SAA BANK \033[0m\n");
-    printf("\t\t   \033[34mThe Name Of Trust\033[0m\n\n");
-    printf("\033[32mChoose one Option:\033[0m\n");
+
+    printf("\n\t\t\tSAA BANK\n");
+    printf("\t\t   The Name Of Trust\n\n");
+    printf("Choose one Option:\n");
     printf("1 for Create your Account\n");
     printf("2 for Login\n");
     printf("Enter your Option: ");
@@ -69,8 +74,14 @@ void stripNewline(char *str) {
     str[strcspn(str, "\n")] = '\0';
 }
 
+void xorCipher(char *str) {
+    for (int i = 0; str[i] != '\0'; i++) {
+        str[i] ^= XOR_KEY;   
+    }
+}
+
 int createYourAccount() {
-    FILE *file = fopen("./users.txt", "a");
+    FILE *file = fopen("./users.txt", "a+");
     if (!file) {
         printf("Error opening file!\n");
         return 1;
@@ -94,6 +105,9 @@ int createYourAccount() {
     fgets(user.password, sizeof(user.password), stdin);
     stripNewline(user.password);
 
+    // Encrypt password before saving
+    xorCipher(user.password);
+
     printf("Enter the Money you want to Deposit: ");
     scanf("%d", &user.balance);
     user.isBlocked = 0;
@@ -105,7 +119,8 @@ int createYourAccount() {
     fclose(file);
 
     printf("\nAccount created successfully!\n");
-    printOptions(&user);
+    noOfUsers = loadUsers(users);
+    printOptions(&users[noOfUsers-1]);
 
     return 0;
 }
@@ -142,6 +157,9 @@ int loginYourAccount(struct User *u) {
                    &users[noOfUsers].balance,
                    &users[noOfUsers].isBlocked) == 6)
         {
+            // decrypt stored password
+            xorCipher(users[noOfUsers].password);
+
             if (strcmp(loginName, users[noOfUsers].name) == 0) {
                 if (users[noOfUsers].isBlocked == 1) {
                     printf("\nYour Account is Blocked. Please Visit our Branch.\n");
@@ -176,13 +194,13 @@ int loginYourAccount(struct User *u) {
 }
 
 char *reversePassword(char password[MAX_PASS]) {
-    char reversePass[MAX_PASS];
+    static char reversePass[MAX_PASS];
     int len = strlen(password);
     for (int i = 0; i < len; i++) {
         reversePass[i] = password[len - i - 1];
     }
     reversePass[len] = '\0';
-//    return reversePass;
+    return reversePass;
 }
 
 // Display menu options
@@ -204,10 +222,10 @@ void printOptions(struct User *u) {
             fastCash(u);
             break;
         case 3:
-         cashWithdrawal(u);
+            cashWithdrawal(u);
             break;
         case 4:
-          //  deposit(u);
+            deposit(u);
             break;
         default:
             printf("Please Select a Valid Operation!\n");
@@ -256,6 +274,32 @@ int fastCash(struct User *u) {
     return 0;
 }
 
+// Deposit money
+void deposit(struct User *u) {
+    int amount;
+    printf("\nEnter amount to deposit: ");
+    scanf("%d", &amount);
+
+    if (amount <= 0) {
+        printf("Invalid amount.\n");
+        return;
+    }
+
+    u->balance += amount;
+
+    // update user in array
+    for (int i = 0; i < noOfUsers; i++) {
+        if (strcmp(users[i].name, u->name) == 0 &&
+            strcmp(users[i].password, u->password) == 0) {
+            users[i].balance = u->balance;
+            break;
+        }
+    }
+
+    saveUsers(users, noOfUsers);
+    printf("\nDeposit Successful! New Balance: %d\n", u->balance);
+}
+
 // Load users from file
 int loadUsers(struct User users[]) {
     FILE *fp = fopen("./users.txt", "r");
@@ -273,6 +317,8 @@ int loadUsers(struct User users[]) {
                   &users[count].balance,
                   &users[count].isBlocked) == 6)
     {
+        // decrypt password in memory
+        xorCipher(users[count].password);
         count++;
         if (count >= MAX_USERS) break;
     }
@@ -281,7 +327,7 @@ int loadUsers(struct User users[]) {
     return count;
 }
 
-// Save all users back to file
+// Save all users back to file (re-encrypt before writing)
 void saveUsers(struct User users[], int count) {
     FILE *fp = fopen("./users.txt", "w");
     if (!fp) {
@@ -290,18 +336,51 @@ void saveUsers(struct User users[], int count) {
     }
 
     for (int i = 0; i < count; i++) {
+        char tempPass[MAX_PASS];
+        strcpy(tempPass, users[i].password);
+        xorCipher(tempPass); // encrypt before writing
+
         fprintf(fp, "%s|%s|%s|%s|%d|%d\n",
                 users[i].name,
                 users[i].email,
                 users[i].phone,
-                users[i].password,
+                tempPass,
                 users[i].balance,
                 users[i].isBlocked);
     }
 
- fclose(fp);
+    fclose(fp);
 }
 
-int cashWithdrawal(struct User user){
-//	printf("")
+int cashWithdrawal(struct User *u){
+    int amount;
+
+    printf("\nEnter amount to withdraw: ");
+    scanf("%d", &amount);
+
+    if (amount <= 0) {
+        printf("Invalid amount.\n");
+        return 1;
+    }
+
+    if (u->balance < amount) {
+        printf("Insufficient balance.\n");
+        return 1;
+    }
+
+    u->balance -= amount;
+
+    for (int i = 0; i < noOfUsers; i++) {
+        if (strcmp(users[i].name, u->name) == 0 &&
+            strcmp(users[i].password, u->password) == 0) {
+            users[i].balance = u->balance;
+            break;
+        }
+    }
+
+    saveUsers(users, noOfUsers);
+    printf("\nWithdrawal Successful! New Balance: %d\n", u->balance);
+    return 0;
 }
+
+// c
